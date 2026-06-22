@@ -2,34 +2,49 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Load bands
-b04 = rasterio.open(r"C:\Users\pdeva\ndvi-project\2026-06-16-00_00_2026-06-16-23_59_Sentinel-2_L2A_B04.tiff")
-b08 = rasterio.open(r"C:\Users\pdeva\ndvi-project\2026-06-16-00_00_2026-06-16-23_59_Sentinel-2_L2A_B08.tiff")
 
-# Read as arrays
-red = b04.read(1).astype(float)
-nir = b08.read(1).astype(float)
+def calc_ndvi(b04_path, b08_path):
+    red = rasterio.open(b04_path).read(1).astype(float)
+    nir = rasterio.open(b08_path).read(1).astype(float)
+    np.seterr(divide="ignore", invalid="ignore")
+    ndvi = np.where((nir + red) == 0, 0, (nir - red) / (nir + red))
+    return ndvi
 
-# Avoid division by zero
-np.seterr(divide='ignore', invalid='ignore')
 
-# Calculate NDVI
-ndvi = np.where((nir + red) == 0, 0, (nir - red) / (nir + red))
+base = r"C:\Users\pdeva\ndvi-project"
 
-# Stats
-valid = ndvi[ndvi != 0]
-print(f"Mean NDVI:  {valid.mean():.3f}")
-print(f"Min NDVI:   {valid.min():.3f}")
-print(f"Max NDVI:   {valid.max():.3f}")
-print(f"Healthy vegetation (NDVI > 0.3): {(valid > 0.3).sum() / len(valid) * 100:.1f}%")
-print(f"Stressed vegetation (0 < NDVI < 0.3): {((valid > 0) & (valid < 0.3)).sum() / len(valid) * 100:.1f}%")
-print(f"Non-vegetation (NDVI < 0): {(valid < 0).sum() / len(valid) * 100:.1f}%")
+dates = {
+    "May 19 2026": (
+        base + "\\2026-05-19-00_00_2026-05-19-23_59_Sentinel-2_L2A_B04_(Raw).tiff",
+        base + "\\2026-05-19-00_00_2026-05-19-23_59_Sentinel-2_L2A_B08_(Raw).tiff",
+    ),
+    "Jun 16 2026": (
+        base + "\\2026-06-16-00_00_2026-06-16-23_59_Sentinel-2_L2A_B04.tiff",
+        base + "\\2026-06-16-00_00_2026-06-16-23_59_Sentinel-2_L2A_B08.tiff",
+    ),
+    "Aug 05 2025": (
+        base + "\\2025-08-05-00_00_2025-08-05-23_59_Sentinel-2_L2A_B04_(Raw).tiff",
+        base + "\\2025-08-05-00_00_2025-08-05-23_59_Sentinel-2_L2A_B08_(Raw).tiff",
+    ),
+}
 
-# Plot
-plt.figure(figsize=(10, 10))
-plt.imshow(ndvi, cmap='RdYlGn', vmin=-1, vmax=1)
-plt.colorbar(label='NDVI')
-plt.title('NDVI - Warangal, Telangana (June 16, 2026)')
-plt.axis('off')
-plt.savefig('ndvi_telangana.png', dpi=150, bbox_inches='tight')
+fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+mean_ndvi = []
+
+for ax, (date, (b04, b08)) in zip(axes, dates.items()):
+    ndvi = calc_ndvi(b04, b08)
+    valid = ndvi[ndvi != 0]
+    mean = valid.mean()
+    mean_ndvi.append((date, mean))
+    im = ax.imshow(ndvi, cmap="RdYlGn", vmin=-1, vmax=1)
+    ax.set_title(date + "\nMean NDVI: " + str(round(mean, 3)))
+    ax.axis("off")
+
+plt.colorbar(im, ax=axes, label="NDVI", fraction=0.02)
+plt.suptitle("NDVI Time Series - Warangal, Telangana", fontsize=14)
+plt.savefig("ndvi_timeseries.png", dpi=150, bbox_inches="tight")
 plt.show()
+
+print("\nNDVI Summary:")
+for date, mean in mean_ndvi:
+    print(date + ": " + str(round(mean, 3)))
