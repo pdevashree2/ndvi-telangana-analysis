@@ -48,3 +48,20 @@ plt.show()
 print("\nNDVI Summary:")
 for date, mean in mean_ndvi:
     print(date + ": " + str(round(mean, 3)))
+
+    # Bar chart of mean NDVI over time
+dates_list = [d for d, _ in mean_ndvi]
+means_list = [m for _, m in mean_ndvi]
+
+plt.figure(figsize=(8, 5))
+bars = plt.bar(dates_list, means_list, color=['#d4e157', '#8bc34a', '#2e7d32'])
+plt.ylim(0, 0.5)
+plt.title('Mean NDVI Over Time - Warangal, Telangana')
+plt.ylabel('Mean NDVI')
+plt.xlabel('Date')
+for bar, val in zip(bars, means_list):
+    plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+             str(round(val, 3)), ha='center', fontsize=11)
+plt.tight_layout()
+plt.savefig('ndvi_barchart.png', dpi=150, bbox_inches='tight')
+plt.show()
